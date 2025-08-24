@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - TradingView Webhook Service{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-tachometer-alt me-2"></i>
+            Dashboard
+        </h1>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card bg-primary">
+            <div class="card-body text-center">
+                <i class="fas fa-webhook fa-2x mb-2"></i>
+                <h3 class="card-title">{{ stats.get('total_webhooks', 0) }}</h3>
+                <p class="card-text">Total Webhooks</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card bg-success">
+            <div class="card-body text-center">
+                <i class="fas fa-check-circle fa-2x mb-2"></i>
+                <h3 class="card-title">{{ stats.get('successful_sends', 0) }}</h3>
+                <p class="card-text">Successful Sends</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card bg-danger">
+            <div class="card-body text-center">
+                <i class="fas fa-times-circle fa-2x mb-2"></i>
+                <h3 class="card-title">{{ stats.get('failed_sends', 0) }}</h3>
+                <p class="card-text">Failed Sends</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card bg-info">
+            <div class="card-body text-center">
+                <i class="fas fa-chart-line fa-2x mb-2"></i>
+                <h3 class="card-title">{{ stats.get('success_rate', 0) }}%</h3>
+                <p class="card-text">Success Rate</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Configuration Status -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-cog me-2"></i>
+                    Configuration Status
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-robot me-2 text-{{ 'success' if telegram_service.bot_token else 'danger' }}"></i>
+                            <span>Telegram Bot Token: 
+                                <span class="badge bg-{{ 'success' if telegram_service.bot_token else 'danger' }}">
+                                    {{ 'Configured' if telegram_service.bot_token else 'Missing' }}
+                                </span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-comments me-2 text-{{ 'success' if telegram_service.channel_id else 'danger' }}"></i>
+                            <span>Telegram Channel ID: 
+                                <span class="badge bg-{{ 'success' if telegram_service.channel_id else 'danger' }}">
+                                    {{ 'Configured' if telegram_service.channel_id else 'Missing' }}
+                                </span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if not telegram_service.bot_token or not telegram_service.channel_id %}
+                <div class="alert alert-warning mt-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Configuration Required:</strong>
+                    Please set the following environment variables:
+                    <ul class="mb-0 mt-2">
+                        {% if not telegram_service.bot_token %}
+                        <li><code>TELEGRAM_BOT_TOKEN</code> - Your Telegram bot token</li>
+                        {% endif %}
+                        {% if not telegram_service.channel_id %}
+                        <li><code>TELEGRAM_CHANNEL_ID</code> - Your Telegram channel ID</li>
+                        {% endif %}
+                    </ul>
+                </div>
+                {% else %}
+                <div class="alert alert-success mt-3">
+                    <i class="fas fa-check-circle me-2"></i>
+                    Configuration is complete! You can now test the Telegram integration.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Test Button -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-flask me-2"></i>
+                    Test Integration
+                </h5>
+            </div>
+            <div class="card-body">
+                <p>Send a test message to verify your Telegram integration is working correctly.</p>
+                <form method="POST" action="{{ url_for('test_telegram') }}">
+                    <button type="submit" class="btn btn-primary" 
+                            {% if not telegram_service.bot_token or not telegram_service.channel_id %}disabled{% endif %}>
+                        <i class="fas fa-paper-plane me-2"></i>
+                        Send Test Message
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-clock me-2"></i>
+                    Recent Activity
+                </h5>
+                <a href="{{ url_for('logs') }}" class="btn btn-sm btn-outline-primary">
+                    View All Logs
+                </a>
+            </div>
+            <div class="card-body">
+                {% if logs %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Source</th>
+                                <th>Status</th>
+                                <th>Channel</th>
+                                <th>Preview</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in logs %}
+                            <tr>
+                                <td>
+                                    <small>{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ log.source }}</span>
+                                </td>
+                                <td>
+                                    {% if log.telegram_status == 'sent' %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check me-1"></i>Sent
+                                        </span>
+                                    {% elif log.telegram_status == 'failed' %}
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-times me-1"></i>Failed
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-warning">
+                                            <i class="fas fa-clock me-1"></i>Pending
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ log.telegram_channel or 'N/A' }}</small>
+                                </td>
+                                <td>
+                                    <small class="text-muted">
+                                        {{ (log.message_content[:50] + '...') if log.message_content|length > 50 else log.message_content }}
+                                    </small>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No webhook activity yet</h5>
+                    <p class="text-muted">
+                        Configure your TradingView alerts to send webhooks to:<br>
+                        <code>{{ request.url_root }}webhook/tradingview</code>
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-refresh the page every 30 seconds if there's recent activity
+if ({{ stats.get('recent_activity', 0) }} > 0) {
+    setTimeout(function() {
+        location.reload();
+    }, 30000);
+}
+</script>
+{% endblock %}

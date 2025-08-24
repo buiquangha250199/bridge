@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}Logs - TradingView Webhook Service{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>
+                <i class="fas fa-list me-2"></i>
+                Webhook Logs
+            </h1>
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>
+                Back to Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-history me-2"></i>
+                    All Webhook Activity
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if logs %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Timestamp</th>
+                                <th>Source</th>
+                                <th>Status</th>
+                                <th>Channel</th>
+                                <th>Message Content</th>
+                                <th>Error</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in logs %}
+                            <tr>
+                                <td><small class="text-muted">#{{ log.id }}</small></td>
+                                <td>
+                                    <small>{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ log.source }}</span>
+                                </td>
+                                <td>
+                                    {% if log.telegram_status == 'sent' %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check me-1"></i>Sent
+                                        </span>
+                                    {% elif log.telegram_status == 'failed' %}
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-times me-1"></i>Failed
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-warning">
+                                            <i class="fas fa-clock me-1"></i>Pending
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ log.telegram_channel or 'N/A' }}</small>
+                                </td>
+                                <td>
+                                    <details>
+                                        <summary class="text-primary" style="cursor: pointer;">
+                                            {{ (log.message_content[:30] + '...') if log.message_content|length > 30 else log.message_content }}
+                                        </summary>
+                                        <div class="mt-2">
+                                            <pre class="bg-dark text-light p-2 rounded"><code>{{ log.message_content }}</code></pre>
+                                        </div>
+                                    </details>
+                                </td>
+                                <td>
+                                    {% if log.error_message %}
+                                        <small class="text-danger">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>
+                                            {{ log.error_message[:50] + '...' if log.error_message|length > 50 else log.error_message }}
+                                        </small>
+                                    {% else %}
+                                        <small class="text-muted">-</small>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if pagination and pagination.pages > 1 %}
+                <nav aria-label="Log pagination" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% if pagination.has_prev %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('logs', page=pagination.prev_num) }}">
+                                    <i class="fas fa-chevron-left"></i> Previous
+                                </a>
+                            </li>
+                        {% endif %}
+                        
+                        {% for page_num in pagination.iter_pages() %}
+                            {% if page_num %}
+                                {% if page_num != pagination.page %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('logs', page=page_num) }}">{{ page_num }}</a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ page_num }}</span>
+                                    </li>
+                                {% endif %}
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">…</span>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if pagination.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('logs', page=pagination.next_num) }}">
+                                    Next <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+                    <h4 class="text-muted">No logs found</h4>
+                    <p class="text-muted">
+                        Webhook activity will appear here once you start receiving alerts from TradingView.
+                    </p>
+                    <div class="mt-4">
+                        <h6>Webhook URL:</h6>
+                        <code class="text-info">{{ request.url_root }}webhook/tradingview</code>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-refresh logs every 10 seconds
+setInterval(function() {
+    location.reload();
+}, 10000);
+</script>
+{% endblock %}
